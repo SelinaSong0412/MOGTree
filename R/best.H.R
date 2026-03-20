@@ -4,6 +4,9 @@
 #' @param A A vector of observed treatment options.
 #' @param mus.hat Estimated conditional mean outcome.
 #' @param minsplit Minimal node size.
+#' @param w_vec A matrix of weight vectors used to aggregate gain values across
+#'   outcomes.
+#' @param weight_combine Rule used to aggregate gain values across `w_vec`.
 
 best.H<-function(H,A,mus.hat,minsplit=20,w_vec,weight_combine){
   p <- ncol(H)

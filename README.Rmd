@@ -1,40 +1,50 @@
-MOGTree
-================
+---
+title: "MOGTree"
+output:
+  github_document:
+    toc: false
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
 
 # MOGTree
 
-`MOGTree` implements the multi-objective gain tree (MOG-Tree) workflow
-for learning patient subgroups with distinct treatment-outcome contrast
-profiles. The package centers on four core steps:
+`MOGTree` implements the multi-objective gain tree (MOG-Tree) workflow for
+learning patient subgroups with distinct treatment-outcome contrast profiles.
+The package centers on four core steps:
 
-1.  fit a tree partition with `DTRtree()`;
-2.  assign new subjects to terminal nodes with `predict_leaf.DTR()`;
-3.  estimate propensity scores with `M.propen()` and outcome regressions
-    with `Reg.mu()`;
-4.  summarize leaf-specific treatment preferences across a grid of
-    outcome weights with `mus.AIPW()`.
+1. fit a tree partition with `DTRtree()`;
+2. assign new subjects to terminal nodes with `predict_leaf.DTR()`;
+3. estimate propensity scores with `M.propen()` and outcome regressions with
+   `Reg.mu()`;
+4. summarize leaf-specific treatment preferences across a grid of outcome
+   weights with `mus.AIPW()`.
 
-The current implementation matches the functions used in the
-repository’s simulation studies. In particular, the tree fit returns the
-subgroup structure, and the weight-specific treatment summaries are
-built from the AIPW estimates.
+The current implementation matches the functions used in the repository's
+simulation studies. In particular, the tree fit returns the subgroup structure,
+and the weight-specific treatment summaries are built from the AIPW estimates.
 
 ## Installation
 
-``` r
+```r
 # install.packages("remotes")
 remotes::install_github("SelinaSong0412/MOGTree")
 ```
 
 For local development from the repository root:
 
-``` r
+```r
 devtools::install(".")
 ```
 
-## Minimal workflow
+## Example workflow
 
-``` r
+```{r minimal-workflow, eval = FALSE}
 library(MOGTree)
 
 set.seed(1)
@@ -93,11 +103,15 @@ sapply(w, function(weight) {
   which.max(weighted_mean)
 })
 ```
+```{r}
+tree_fit
+```
+
 
 ## Main functions
 
-- `DTRtree()` builds the MOG-Tree partition using a weight-aggregated
-  gain criterion.
+- `DTRtree()` builds the MOG-Tree partition using a weight-aggregated gain
+  criterion.
 - `predict_leaf.DTR()` maps new covariate profiles to terminal nodes.
 - `M.propen()` estimates multinomial propensity scores.
 - `Reg.mu()` estimates treatment-specific outcome regressions.
@@ -106,7 +120,7 @@ sapply(w, function(weight) {
 
 ## Learn more
 
-The package vignette walks through the same workflow with a small
-reproducible example:
+The package vignette walks through the same workflow with a small reproducible
+example:
 
-- `vignette("getting-started", package = "MOGTree")`
+- `vignette("example", package = "MOGTree")`

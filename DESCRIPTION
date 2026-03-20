@@ -1,0 +1,48 @@
+Package: MOGTree
+Type: Package
+Title: Multi-Objective Gain Trees for Personalized Treatment Decisions
+Version: 0.1.0
+Authors@R: c(
+    person("Yao", "Song", email = "yaos@umich.edu", role = c("aut", "cre")),
+    person("Chang", "Wang", role = "aut"),
+    person("Lu", "Wang", role = "aut")
+    )
+Description: Fits multi-objective gain trees (MOG-Trees) that partition
+    patients into subgroups with distinct treatment-outcome contrast profiles.
+    The package includes tree construction, leaf prediction, propensity score
+    estimation, regression-based outcome modeling, and augmented inverse
+    probability weighted estimators that can be used to summarize treatment
+    preferences across outcome weights.
+License: MIT + file LICENSE
+URL: https://github.com/SelinaSong0412/MOGTree
+BugReports: https://github.com/SelinaSong0412/MOGTree/issues
+Depends: R (>= 3.5.1)
+Imports:
+    data.tree,
+    dplyr,
+    ggforce,
+    ggpattern,
+    ggplot2,
+    nnet,
+    randomForest,
+    stringr
+Suggests:
+    knitr,
+    rmarkdown
+Collate:
+    'MOGTree-package.R'
+    'combine.mat.R'
+    'Benefit_gain.R'
+    'M.propen.R'
+    'Reg.mu.R'
+    'mus.AIPW.R'
+    'Split.X.R'
+    'best.H.R'
+    'MO_Tree.R'
+    'predict_leaf.R'
+    'vis_tree.R'
+    'visualization.R'
+VignetteBuilder: knitr
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2

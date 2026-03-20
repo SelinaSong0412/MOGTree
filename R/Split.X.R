@@ -3,7 +3,10 @@
 #' @param X A vector of a covariate for each patients.
 #' @param A A vector of observed treatment indicators.
 #' @param mus.hat Estimated conditional mean outcome.
+#' @param w_vec A matrix of weight vectors used to aggregate gain values across
+#'   outcomes.
 #' @param minsplit Minimal node size.
+#' @param weight_combine Rule used to aggregate gain values across `w_vec`.
 #'
 #' @importFrom utils combn
 #' @importFrom stats quantile

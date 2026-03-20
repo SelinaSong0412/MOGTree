@@ -26,11 +26,13 @@ library(tibble)
 library(dplyr)
 library(tidyr)
 library(MOTRL)
+library(ggsci)
+library(forcats) # For factor manipulation (fct_recode)
 
 setwd("R")
 source("Benefit_gain.R")
 source("best.H.R")
-source("MO_Tree_Chang.R")
+source("MO_Tree.R")
 source("predict_leaf.R")
 source("Reg.mu.R")
 source("Split.X.R")
@@ -39,6 +41,18 @@ source("vis_tree.R")
 
 source("mus.AIPW.R")
 source("M.propen.R")
+
+method_colors_for_plot <- c(
+  "GMM" = "#f7766d",      # Your specified color for GMM
+  "HC" = "#c49a00",# "#efce38",      # Your specified color for HC
+  # "KMeans3" is removed
+  "KMeans" =  "#02c094", # "#54b300", # Your specified color for KMeans4, now named "KMeans"
+  "MOTree" = "#00b6eb",   # Your specified color for MOTree
+  "SOM" = "#a489ff",      # Your specified color for SOM
+  "Spectral" = "#F781BF"  # Your specified color for Spectral
+)
+
+
 Custom.color = c("#CD2626","#79aec1","#2E8B57","#d6b55a")
 
 map_to_consecutive = function(x) {
@@ -74,7 +88,7 @@ Simulation_MOTree = function(iter = 100, n.cov = 5, n.per.group = 100) {
     ############ Data generation ##############
     ###########################################
     set.seed(412 + i)
-    k = 4
+    # k = 4
     group = rep(1:4, each = n.per.group)
     X = matrix(NA, nrow = n.per.group * 4, ncol = n.cov)
     X[, 1] = rnorm(n.per.group*4,0,0.05) + (group-1)/3
@@ -214,7 +228,7 @@ Simulation_MOTree = function(iter = 100, n.cov = 5, n.per.group = 100) {
     true_labels_ari = as.numeric(df_obs$true_Group)      
     clustering_methods = list(
       MOTree = df_obs$group.MOTree,
-      MOTRL = NA,
+      # MOTRL = NA,
       HC = df_obs$group.hc,
       GMM = df_obs$group.gmm,
       KMeans3 = df_obs$group.kmeans3,
@@ -262,7 +276,8 @@ Simulation_MOTree = function(iter = 100, n.cov = 5, n.per.group = 100) {
                 function(x) Y_w[x, df_obs[[paste0("opt_trt_", method_name, "_w", w_idx - 1)]][x]])
           
           avg_cf_results <- get(paste0("avg_cf_results", w_idx - 1))
-          avg_cf_results[[method]][i] <- mean(df_obs[[paste0("cf_", method_name, "_w", w_idx - 1)]])
+          avg_cf_results[[method]][i] <- mean(df_obs[[paste0("cf_", method_name, "_w", w_idx - 1)]], na.rm = T)
+          
           assign(paste0("avg_cf_results", w_idx - 1), avg_cf_results)
 
   
@@ -274,7 +289,7 @@ Simulation_MOTree = function(iter = 100, n.cov = 5, n.per.group = 100) {
             pred_opt_trt[patient] %in% non_dominant_treatments[[patient]]
           })
           non_dominant_results <- get(paste0("non_dominant_results", w_idx - 1))
-          non_dominant_results[[method]][i] <- mean(is_non_dominant)
+          non_dominant_results[[method]][i] <- mean(is_non_dominant, na.rm = T)
           assign(paste0("non_dominant_results", w_idx - 1), non_dominant_results)
           
           cluster_opt_trt = list() 
@@ -282,9 +297,6 @@ Simulation_MOTree = function(iter = 100, n.cov = 5, n.per.group = 100) {
       }
     
     }
-    
-    
-    
   }
   
   # evaluation
@@ -385,24 +397,49 @@ Simulation_MOTree = function(iter = 100, n.cov = 5, n.per.group = 100) {
   return(list(clust_perform = clust_perform,
               cf_Y_perform = cf_Y_perform,
               non_dominant_perform = non_dominant_perform,
-              
               cf_Y = cf_Y,
               # obs_weighted_means = obs_weighted_means,
               true_optimal_weighted_means = true_optimal_weighted_means,
               non_dominant = non_dominant
 ))
 }
-  
+```
+
+
+```{r}
+# smaller sample size
+result10 = Simulation_MOTree(iter = 100, n.cov = 5, n.per.group = 10)
+
+# smaller sample size
+result25 = Simulation_MOTree(iter = 100, n.cov = 5, n.per.group = 25)
 
 # smaller sample size
 result50 = Simulation_MOTree(iter = 100, n.cov = 5, n.per.group = 50)
+
 
 # larger sample size
 result100 = Simulation_MOTree(iter = 100, n.cov = 5, n.per.group = 100)
 
 # larger sample size
+result150 = Simulation_MOTree(iter = 100, n.cov = 5, n.per.group = 150)
+
+# larger sample size
 result200 = Simulation_MOTree(iter = 100, n.cov = 5, n.per.group = 200)
+
+
+save(result10, result25, result50, result100, result150, result200, file = "Two_obj_results.RData")
 ```
+
+
+```{r}
+result10$clust_perform
+result25$clust_perform
+result50$clust_perform
+result100$clust_perform
+result150$clust_perform
+```
+
+
 
 ## performance Evaluation
 
@@ -421,17 +458,70 @@ result100$non_dominant_perform
 ```
 
 ```{r}
-result500$clust_perform
-result500$cf_Y_perform
-result500$non_dominant_perform
+result200$clust_perform
+result200$cf_Y_perform
+result200$non_dominant_perform
 ```
 
 ### Visualization
-
-Sample size = 4 * 50
-
 $$Y_w^{*opt} - \hat Y_w^*$$
+
+### 0. Sampe size = 4 * 25
+
 ```{r}
+outcomes <- result25$cf_Y  # Counterfactual outcomes
+true_opt_means <- result25$true_optimal_weighted_means  # 1x11 matrix of observed weighted outcomes
+
+# Prepare the observed means for merging
+true_opt_long <- as.data.frame(t(true_opt_means)) %>%
+  rownames_to_column(var = "Weight") %>%
+  rename(TrueOpt = True_Optimal_Mean) %>%
+  mutate(Weight = as.numeric(gsub("Weight_", "", Weight)))
+
+# Prepare the counterfactual mean outcomes and merge with observed means
+outcomes_long <- outcomes %>%
+  rownames_to_column(var = "Method") %>%
+  pivot_longer(cols = starts_with("avg_cf_mean"), 
+               names_to = "Weight", 
+               values_to = "Mean") %>%
+  mutate(Weight = as.numeric(gsub("avg_cf_mean", "", Weight)) * 0.1) %>%
+  left_join(true_opt_long, by = "Weight") %>%
+  mutate(Difference = Mean - TrueOpt)  # Calculate the difference between counterfactual and observed means
+
+outcomes_filtered_renamed <- outcomes_long %>%
+  filter(Method != "KMeans3") %>% # Remove rows for KMeans3
+  mutate(
+    Method = fct_recode(Method,
+      "KMeans" = "KMeans4" # Rename KMeans4 to KMeans
+    )
+  ) %>%
+  mutate(Method = droplevels(Method))
+
+ggplot(outcomes_filtered_renamed, aes(x = Weight, y = Difference, color = Method, fill = Method)) +
+  geom_smooth(method = "loess", se = TRUE, size = 1.2) +  
+  labs(title = "Difference between Estimated and True Optimal Counterfactual Outcome",
+       x = "Weight on Y1",
+       y = "Difference (Y_opt - Y_hat)") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16),
+    axis.title = element_text(size = 12),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10),
+    # legend.position = "bottom", # Place the legend at the bottom of the plot
+    # legend.direction = "horizontal"
+  ) +
+  scale_color_manual(values = method_colors_for_plot) +
+  scale_fill_manual(values = method_colors_for_plot) # +
+  # guides(color = guide_legend(nrow = 1, byrow = TRUE))
+```
+
+
+
+
+
+#### 1. Sample size = 4 * 50
+```{r, warning = FALSE}
 # Extract outcomes from the simulation results
 outcomes <- result50$cf_Y  # Counterfactual outcomes
 true_opt_means <- result50$true_optimal_weighted_means  # 1x11 matrix of observed weighted outcomes
@@ -452,7 +542,10 @@ outcomes_long <- outcomes %>%
   left_join(true_opt_long, by = "Weight") %>%
   mutate(Difference = Mean - TrueOpt)  # Calculate the difference between counterfactual and observed means
 
-# Plot the differences
+```
+
+Plot the differences (orignial)
+```{r}
 ggplot(outcomes_long, aes(x = Weight, y = Difference, color = Method, fill = Method)) +
   geom_smooth(method = "loess", se = TRUE, size = 1.2) +  # Smoothed line with CI for difference
   labs(title = "Difference between Estimated and True Optimal Conterfactual Outcome",
@@ -463,14 +556,75 @@ ggplot(outcomes_long, aes(x = Weight, y = Difference, color = Method, fill = Met
     plot.title = element_text(hjust = 0.5, size = 16),
     axis.title = element_text(size = 12),
     legend.title = element_text(size = 12),
-    legend.text = element_text(size = 10)
-  )
+    legend.text = element_text(size = 10),
+    
+    legend.position = "bottom", # Place the legend at the bottom of the plot
+    legend.direction = "horizontal"
+    
+  ) + 
+  
+  scale_color_discrete(labels = c(
+    "GMM" = "GMM",
+    "HC" = "HC",
+    "KMeans3" = "KMeans-TG", # Renamed
+    "KMeans4" = "KMeans-G",  # Renamed
+    "MOTree" = "MOTree",
+    "SOM" = "SOM",
+    "Spectral" = "Spectral"
+  )) +
+  scale_fill_discrete(labels = c(
+    "GMM" = "GMM",
+    "HC" = "HC",
+    "KMeans3" = "KMeans-TG", # Renamed
+    "KMeans4" = "KMeans-G",  # Renamed
+    "MOTree" = "MOTree",
+    "SOM" = "SOM",
+    "Spectral" = "Spectral"
+  )) +
+  
+  
+  # scale_color_d3() + scale_fill_d3() # its okay, looks clear and our method is red
+  # scale_color_jama()  + scale_fill_jama()
+  guides(color = guide_legend(nrow = 1, byrow = TRUE)) # Arrange color legend items in 1 row
 
+# scales::show_col(pal_npg("nrc", alpha = 0.7)(7))
 
+# c("#f7766d", "#c49a00", "#53b401", "#02c094", "#00b6eb", "#a58aff", "#fb61d7")
+```
+
+Plot the differences (Delete KMeans3)
+```{r}
+outcomes_filtered_renamed <- outcomes_long %>%
+  filter(Method != "KMeans3") %>% # Remove rows for KMeans3
+  mutate(
+    Method = fct_recode(Method,
+      "KMeans" = "KMeans4" # Rename KMeans4 to KMeans
+      # Other methods will keep their original names
+    )
+  ) %>%  
+  mutate(Method = droplevels(Method))
+
+ggplot(outcomes_filtered_renamed, aes(x = Weight, y = Difference, color = Method, fill = Method)) +
+  geom_smooth(method = "loess", se = TRUE, size = 1.2) +  
+  labs(title = "Difference between Estimated and True Optimal Counterfactual Outcome",
+       x = "Weight on Y1",
+       y = "Difference (Y_opt - Y_hat)") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16),
+    axis.title = element_text(size = 12),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom", # Place the legend at the bottom of the plot
+    legend.direction = "horizontal"
+  ) +
+  scale_color_manual(values = method_colors_for_plot) +
+  scale_fill_manual(values = method_colors_for_plot) +
+  guides(color = guide_legend(nrow = 1, byrow = TRUE)) # Arrange color legend items in 1 row
 ```
 
 
-
+Non Dominant Rate
 ```{r}
 # Extract the non-dominant data from the simulation results
 non_dominant <- result50$non_dominant
@@ -512,13 +666,12 @@ ggplot(non_dominant_long, aes(x = Weight, y = Mean, color = Method, fill = Metho
 
 
 
-Sample size = 4 * 500
+### Sample size = 4 * 100
 
-$$Y_w^{*opt} - \hat Y_w^*$$
 ```{r}
 # Extract outcomes from the simulation results
-outcomes <- result500$cf_Y  # Counterfactual outcomes
-true_opt_means <- result500$true_optimal_weighted_means  # 1x11 matrix of observed weighted outcomes
+outcomes <- result100$cf_Y  # Counterfactual outcomes
+true_opt_means <- result100$true_optimal_weighted_means  # 1x11 matrix of observed weighted outcomes
 
 # Prepare the observed means for merging
 true_opt_long <- as.data.frame(t(true_opt_means)) %>%
@@ -536,8 +689,17 @@ outcomes_long <- outcomes %>%
   left_join(true_opt_long, by = "Weight") %>%
   mutate(Difference = Mean - TrueOpt)  # Calculate the difference between counterfactual and observed means
 
+outcomes_filtered_renamed <- outcomes_long %>%
+  filter(Method != "KMeans3") %>% # Remove rows for KMeans3
+  mutate(
+    Method = fct_recode(Method,
+      "KMeans" = "KMeans4" # Rename KMeans4 to KMeans
+    )
+  ) %>%
+  mutate(Method = droplevels(Method))
+
 # Plot the differences
-ggplot(outcomes_long, aes(x = Weight, y = Difference, color = Method, fill = Method)) +
+ggplot(outcomes_filtered_renamed, aes(x = Weight, y = Difference, color = Method, fill = Method)) +
   geom_smooth(method = "loess", se = TRUE, size = 1.2) +  # Smoothed line with CI for difference
   labs(title = "Difference between Estimated and True Optimal Conterfactual Outcome",
        x = "Weight on Y1",
@@ -547,17 +709,21 @@ ggplot(outcomes_long, aes(x = Weight, y = Difference, color = Method, fill = Met
     plot.title = element_text(hjust = 0.5, size = 16),
     axis.title = element_text(size = 12),
     legend.title = element_text(size = 12),
-    legend.text = element_text(size = 10)
-  )
+    legend.text = element_text(size = 10)# ,
 
-
+    # legend.position = "bottom", 
+    # legend.direction = "horizontal"
+  ) +
+  scale_color_manual(values = method_colors_for_plot) +
+  scale_fill_manual(values = method_colors_for_plot) # +
+  # guides(color = guide_legend(nrow = 1, byrow = TRUE))
 ```
 
 
 
 ```{r}
 # Extract the non-dominant data from the simulation results
-non_dominant <- result500$non_dominant
+non_dominant <- result100$non_dominant
 
 # Prepare the non-dominant data for plotting
 non_dominant_long <- non_dominant %>%

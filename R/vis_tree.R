@@ -1,4 +1,3 @@
-# install.packages("DiagrammeR")
 library(data.tree)
 library(dplyr)
 
@@ -56,69 +55,3 @@ vis_tree = function(max_h,treeout,number){
 }
 
 
-
-# library(igraph)
-# plot(as.igraph(tree0, directed = TRUE, direction = "climb"))
-# 
-# library(networkD3)
-# useRtreeList <- ToListExplicit(tree0, unname = TRUE)
-# radialNetwork( useRtreeList)
-
-
-
-
-
-# 
-# initial_tree<-function(max_h,treeout){
-#   
-# 
-#   dat<-matrix(0,2^max_h,max_h+5)
-#   for(ii in 1:2^max_h){
-#     dat[ii,1:max_h] <- ten2bin(ii-1,max_h)+1
-#   }
-#   pathString <- paste("dat", dat[,1],sep = "/")
-#   for(ii in 2:max_h){
-#     dat[,ii]<-paste(dat[,ii-1],dat[,ii],sep = "")
-#     pathString <- paste(pathString, dat[,ii],sep = "/")
-#   }
-#   dat<-as.data.frame(dat)
-#   colnames(dat)<- c(1:max_h,"judge","sign","threshold","h","n0")
-#   dat$pathString <- pathString
-#   
-#   
-# 
-#   h0<- 0
-#   sign0<-0
-#   judge0<- 0
-#   threshold0<-0
-#   value0<-NA
-#   
-#   cur_h = 1
-#   for(ii in 1:max_h){
-#     for(kk in 1:(2^ii/2)){
-#       tmp<-which(h0== ii-1)
-#       jj<-tmp[kk]
-#       new_judge<- treeout$X[cur_h]
-#       thres0<- treeout$cutoff[cur_h]
-#       
-#       judge0<- c(judge0[1:jj],new_judge,new_judge,judge0[-(1:jj)] )
-#       threshold0<-c(threshold0[1:jj],thres0,thres0,threshold0[-(1:jj)] )
-#       sign0<- c(sign0[1:jj],-1,1,sign0[-(1:jj)] )
-#       h0<- c(h0[1:jj],ii,ii,h0[-(1:jj)] )
-#       cur_h = cur_h + 1
-#     }
-#   }
-# 
-#   tree <- as.Node(dat)  
-#   tree$Set(sign=sign0,h=h0,threshold=threshold0,judge=judge0,n0=0)
-#   return(tree)
-# }
-# 
-# tree0 = initial_tree(max_h = 3,treeout)
-# print(tree0,"judge","threshold","sign","h","n0")
-# 
-# 
-# library(igraph)
-# plot(as.igraph(tree0, directed = TRUE, direction = "climb"))
-# 
-# plot(tree0)

@@ -1,5 +1,5 @@
-
-#,"#ae3f51"
+library(ggplot2)
+library(ggforce)
 
 my_vis = function(mu1.hat,mu2.hat,chosen,k,label,lwd=3){
   w0 = seq(0,1,0.02)
@@ -61,38 +61,13 @@ my_vis_pair = function(mu1.hat,mu2.hat,chosen1,chosen2,k,label,lwd=3){
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
       axis.line = element_line(colour = "black"),aspect.ratio = 0.5
-    )  +scale_fill_manual(values = Custom.color)+   #映射云雨图和箱线图的颜色
+    )  +scale_fill_manual(values = Custom.color)+   
     scale_color_manual(values = Custom.color)
   
   p1
 }
 
 
-
-
-library(ggplot2)
-library(ggforce)
-
-# my_vis_point = function(chosen){
-#   
-#   tmp1 = mus1.reg[chosen,] 
-#   tmp2 = mus2.reg[chosen,] 
-#   
-#   for(ii in 1:dim(tmp1)[1]){
-#     tmp1[ii,] = tmp1[ii,] - tmp1[ii,4] + rnorm(1,0,0.001)
-#     tmp2[ii,] = tmp2[ii,] - tmp2[ii,4] + rnorm(1,0,0.001)
-#   }
-#   
-#   df_vis = data.frame(x = as.vector(tmp1),
-#                       y = as.vector(tmp2),
-#                       Treatment = rep(c("A","B","C","D"),each = nrow(tmp1)))
-#   p1 = ggplot(data = df_vis,aes(x = x,y = y,group = Treatment,col=Treatment))+geom_point(alpha = 0.4) +
-#     stat_ellipse(geom = "polygon",
-#                  level = 1/nrow(tmp1),
-#                  aes(fill = Treatment), 
-#                  alpha = 0.9)
-#   p1
-# }
 
 
 my_vis_elipse = function(mu1.hat,mu2.hat,chosen,k,ref_k,label,lwd=3,
@@ -151,7 +126,7 @@ my_vis_elipse = function(mu1.hat,mu2.hat,chosen,k,ref_k,label,lwd=3,
                       Treatment = rep(label,each = nrow(tmp1)))
   
   p = ggplot()+geom_path(data = df_elipse,aes(x = x, y = y,group=Treatment,col = Treatment))+ 
-    geom_point(data = df_vis,aes(x = x,y = y,group = Treatment,col=Treatment),alpha = 0.5)+ theme_bw() + coord_fixed()+
+    geom_point(data = df_vis,aes(x = x,y = y,group = Treatment,col=Treatment),alpha = 0.8)+ theme_bw() + coord_fixed()+
     theme(
       plot.title = element_text( size=textsize, face="bold.italic"),
       axis.title.x = element_text( size=textsize, face="bold"),
@@ -164,7 +139,7 @@ my_vis_elipse = function(mu1.hat,mu2.hat,chosen,k,ref_k,label,lwd=3,
     scale_fill_manual(values = Custom.color)+   
     scale_color_manual(values = Custom.color)
   
-  p
+  # p
 }
 
 
@@ -194,12 +169,13 @@ my_vis_mean = function(mu1.hat,mu2.hat,chosen,k,label,lwd=3){
       panel.border = element_blank(),
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
-      axis.line = element_line(colour = "black"),aspect.ratio = 0.5
+      axis.line = element_line(colour = "black"),
+      aspect.ratio = 0.5
     )   + xlab("Outcome 1")+ ylab("Outcome 2")+
     scale_fill_manual(values = Custom.color)+   
     scale_color_manual(values = Custom.color)
   
-  p
+  # p
 }
 
 
@@ -323,14 +299,6 @@ my_vis_mean_pair = function(mu1.hat,mu2.hat,chosen1,chosen2,i,j,label,k,
 
 
 
-
-
-#(p = my_vis_mean_pair(mu1.hat,mu2.hat,chosen1,chosen2,i,j,label1,k,point_size=5))
-
-
-
-
-
 my_vis_all_pair = function(mu1.hat,mu2.hat,leaf_pred,label,k,alpha = 1,
                            my_magick = c("bricks","horizontalsaw","verticalsaw",
                                          "hs_horizontal","hs_vertical")){
@@ -387,78 +355,3 @@ my_vis_all_pair = function(mu1.hat,mu2.hat,leaf_pred,label,k,alpha = 1,
   p
 }
 
-
-# 
-# 
-# 
-# my_vis_all_pair = function(mu1.hat,mu2.hat,leaf_pred,label,k,alpha = 1,
-#                            my_magick = c("bricks","horizontalsaw","verticalsaw",
-#                                          "hs_horizontal","hs_vertical")){
-#   
-#   leaf_vec = sort(unique(leaf_pred))
-#   m0 = length(leaf_vec)
-#   df_vis = data.frame()
-#   for(ii in 1:m0){
-#     chosen1 = which(leaf_pred==leaf_vec[ii])
-#     tmp1 = mu1.hat[chosen1,] 
-#     tmp2 = mu2.hat[chosen1,] 
-#     tmp1 = tmp1 - tmp1[,k]
-#     tmp2 = tmp2 - tmp2[,k]
-#     df_vis1 = data.frame(x = colMeans(tmp1),
-#                          y = colMeans(tmp2),
-#                          Treatment = label)
-#     df_vis1$Group = paste("Group",ii)
-#     df_vis = rbind(df_vis,df_vis1)
-#   }
-#   
-#   df_vis$Group = as.factor(df_vis$Group)
-#   
-#   
-#   hull <- df_vis %>% group_by(Group) %>% 
-#     slice(chull(x,y))
-#   
-#   # geom_polygon(aes(x = x,y = y,fill = Group, group = Group),alpha = 0.1)+
-#   
-#   p = ggplot()+
-#     geom_polygon_pattern(data = hull,
-#                          aes(x=x,y=y, pattern_type = Group, pattern_fill = Group), # , pattern_fill = Group
-#                          alpha = 0.4,
-#                          pattern_alpha = 0.4,
-#                          pattern                  = 'magick',
-#                          pattern_scale            = 1,
-#                          stat                     = "identity",
-#                          fill                     = "#79aec1",
-#                          pattern_aspect_ratio     = 1,
-#                          pattern_density          = 0.1,
-#                          pattern_fill = "black"
-#     )+scale_pattern_type_discrete(choices = setNames(my_magick,unique(df_vis$Group)) )+
-#     theme(legend.position = "bottom",legend.key.size = unit(2, 'cm'))
-#   
-#   p
-# }
-# 
-# (p2 = my_vis_all_pair(mu1.hat,mu2.hat,leaf_pred,label1,k,alpha = 1))
-# 
-# 
-# 
-# df1 <- data.frame(trt = c("a", "b", "c"), outcome = c(2.3, 1.9, 3.2))
-# 
-# ggplot(df1, aes(trt, outcome)) +
-#   geom_col_pattern(
-#     aes(
-#       pattern_type = trt, 
-#       pattern_fill = trt
-#     ),
-#     pattern       = 'magick',
-#     pattern_key_scale_factor = 0.7,
-#     fill          = 'white',
-#     colour        = 'black'
-#   ) +
-#   theme_bw(15) +
-#   labs(
-#     title    = "ggpattern::geom_col_pattern()",
-#     subtitle = "pattern='magick'"
-#   ) +
-#   theme(legend.key.size = unit(2, 'cm')) +
-#   scale_pattern_type_discrete(choices = c('bricks', 'fishscales', 'right45')) +
-#   coord_fixed(ratio = 1/2)

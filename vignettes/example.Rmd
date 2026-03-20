@@ -1,0 +1,159 @@
+---
+title: "Getting Started with MOGTree"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with MOGTree}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Overview
+
+The manuscript for MOG-Tree motivates a tree that is stable across a grid of
+outcome weights by maximizing an aggregated multi-objective gain. In the
+current repository implementation, the package workflow has two layers:
+
+1. `DTRtree()` learns a subgrouping tree from observed outcomes, treatments,
+   and baseline covariates.
+2. `M.propen()`, `Reg.mu()`, and `mus.AIPW()` can then be used to summarize
+   which treatment is preferred inside each leaf for different outcome weights.
+
+This vignette shows that workflow with a small two-outcome toy example.
+
+## Simulate a small example
+
+```{r}
+library(MOGTree)
+
+set.seed(412)
+n <- 120
+H <- data.frame(
+  X1 = rnorm(n),
+  X2 = rnorm(n)
+)
+A <- sample(1:4, n, replace = TRUE)
+
+group <- ifelse(H$X1 <= 0, 1, 2)
+base_y1 <- rbind(
+  c(1.2, 0.4, -0.1, -0.4),
+  c(-0.2, 0.3, 0.8, 1.1)
+)
+base_y2 <- rbind(
+  c(0.1, 0.7, 1.0, 0.6),
+  c(1.1, 0.8, 0.2, -0.1)
+)
+
+Y1_cf <- matrix(NA_real_, n, 4)
+Y2_cf <- matrix(NA_real_, n, 4)
+
+for (i in seq_len(n)) {
+  Y1_cf[i, ] <- base_y1[group[i], ] + 0.2 * H$X2[i] + rnorm(4, sd = 0.15)
+  Y2_cf[i, ] <- base_y2[group[i], ] - 0.1 * H$X2[i] + rnorm(4, sd = 0.15)
+}
+
+Y1_obs <- Y1_cf[cbind(seq_len(n), A)]
+Y2_obs <- Y2_cf[cbind(seq_len(n), A)]
+```
+
+## Fit the MOG-Tree partition
+
+```{r}
+weight_grid <- seq(0, 1, by = 0.25)
+
+tree_fit <- DTRtree(
+  Ys = cbind(Y1_obs, Y2_obs),
+  A = A,
+  H = H,
+  depth = 2,
+  minsplit = 15,
+  w_vec = cbind(weight_grid, 1 - weight_grid),
+  weight_combine = "mean",
+  lambda = 0.01
+)
+
+tree_fit
+```
+
+The fitted object records the split variable, split cutoff, and terminal-group
+index for each node.
+
+## Assign subjects to terminal nodes
+
+```{r}
+leaf_id <- predict_leaf.DTR(tree_fit, H)
+table(leaf_id)
+```
+
+## Estimate leaf-specific treatment preferences
+
+The tree partitions patients into subgroups. To study treatment preferences
+inside each subgroup, we estimate propensity scores, regression means, and AIPW
+counterfactual means for each outcome.
+
+```{r}
+pi_hat <- M.propen(A, H)
+mu1_reg <- Reg.mu(Y1_obs, A, H)$mus.reg
+mu2_reg <- Reg.mu(Y2_obs, A, H)$mus.reg
+mu1_hat <- mus.AIPW(Y1_obs, A, pi_hat, mu1_reg)
+mu2_hat <- mus.AIPW(Y2_obs, A, pi_hat, mu2_reg)
+```
+
+The code below computes, for each terminal node and each outcome weight, the
+mean weighted counterfactual outcome for every treatment and reports the
+treatment with the largest value.
+
+```{r}
+summarize_leaf_preferences <- function(leaf_membership, mu1_hat, mu2_hat, weights) {
+  leaf_values <- sort(unique(leaf_membership))
+
+  do.call(
+    rbind,
+    lapply(leaf_values, function(leaf) {
+      idx <- leaf_membership == leaf
+      do.call(
+        rbind,
+        lapply(weights, function(weight) {
+          weighted_mean <- colMeans(weight * mu1_hat[idx, ] + (1 - weight) * mu2_hat[idx, ])
+          data.frame(
+            leaf = leaf,
+            weight_outcome1 = weight,
+            preferred_treatment = which.max(weighted_mean)
+          )
+        })
+      )
+    })
+  )
+}
+
+preference_summary <- summarize_leaf_preferences(
+  leaf_membership = leaf_id,
+  mu1_hat = mu1_hat,
+  mu2_hat = mu2_hat,
+  weights = weight_grid
+)
+
+preference_summary
+```
+
+This summary shows how the preferred treatment can vary across terminal nodes and across different weights on the first outcome.
+
+## Input checklist
+
+For your own data:
+
+- `Ys` should be an `n x m` matrix of observed outcomes.
+- `A` should be a treatment vector coded with at least two observed treatment levels.
+- `H` should contain the baseline tailoring variables used to split the tree.
+- `w_vec` should be a matrix whose rows are candidate weight vectors that sum
+  to one.
+
+The simulation scripts in the repository's
+`Simulation/Two_Outcome_Simulation.Rmd` and
+`Simulation/Three_Outcome_Simulation.Rmd` files provide larger end-to-end examples matching the experiments in the manuscript.
