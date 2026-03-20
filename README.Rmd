@@ -103,6 +103,7 @@ sapply(w, function(weight) {
   which.max(weighted_mean)
 })
 ```
+
 ```{r}
 tree_fit
 ```

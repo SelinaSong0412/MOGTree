@@ -94,6 +94,10 @@ sapply(w, function(weight) {
 })
 ```
 
+```{r}
+tree_fit
+```
+
 ## Main functions
 
 - `DTRtree()` builds the MOG-Tree partition using a weight-aggregated
@@ -109,4 +113,4 @@ sapply(w, function(weight) {
 The package vignette walks through the same workflow with a small
 reproducible example:
 
-- `vignette("getting-started", package = "MOGTree")`
+- `vignette("example", package = "MOGTree")`
